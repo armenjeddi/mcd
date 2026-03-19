@@ -2,13 +2,21 @@ set -ex
 
 PROMPT_TYPE=$1
 MODEL_NAME_OR_PATH=$2
-OUTPUT_DIR=${MODEL_NAME_OR_PATH}/math_eval
+OUTPUT_DIR=${MODEL_NAME_OR_PATH}_mc3/math_eval
 
 SPLIT="test"
-NUM_TEST_SAMPLE=-1
+NUM_TEST_SAMPLE=500
+
+## noise from 0.25 to 0.5
+MC_SAMPLES=7
+MC_START_LAYER=8
+MC_AUGMENT_P=0.5
+MC_NOISE_STD=0.5
+
 
 # English open datasets
-DATA_NAME="gsm8k,math,svamp,asdiv,mawps,carp_en,tabmwp,minerva_math,gaokao2023en,olympiadbench,college_math"
+# DATA_NAME="gsm8k,math,svamp,asdiv,mawps,carp_en,tabmwp,minerva_math,gaokao2023en,olympiadbench,college_math"
+DATA_NAME="olympiadbench,college_math"
 TOKENIZERS_PARALLELISM=false \
 python3 -u math_eval.py \
     --model_name_or_path ${MODEL_NAME_OR_PATH} \
@@ -23,9 +31,13 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
     --overwrite \
+    --mc_samples ${MC_SAMPLES} \
+    --mc_start_layer ${MC_START_LAYER} \
+    --mc_augment_p ${MC_AUGMENT_P} \
+    --mc_noise_std ${MC_NOISE_STD} \
+    # --use_vllm \
 
 # English multiple-choice datasets
 DATA_NAME="aqua,sat_math,mmlu_stem"
@@ -43,10 +55,14 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
     --overwrite \
-    --num_shots 5
+    --mc_samples ${MC_SAMPLES} \
+    --mc_start_layer ${MC_START_LAYER} \
+    --mc_augment_p ${MC_AUGMENT_P} \
+    --mc_noise_std ${MC_NOISE_STD} \
+    # --use_vllm \
+    # --num_shots 5 \
 
 # Chinese gaokao collections
 DATA_NAME="gaokao2024_I,gaokao2024_II,gaokao2024_mix,gaokao_math_cloze,gaokao_math_qa"
@@ -64,10 +80,14 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
     --overwrite \
-    --adapt_few_shot
+    --adapt_few_shot \
+    --mc_samples ${MC_SAMPLES} \
+    --mc_start_layer ${MC_START_LAYER} \
+    --mc_augment_p ${MC_AUGMENT_P} \
+    --mc_noise_std ${MC_NOISE_STD} \
+    # --use_vllm \
 
 # Chinese other datasets
 DATA_NAME="cmath,cn_middle_school"
@@ -85,10 +105,14 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
     --overwrite \
-    --adapt_few_shot
+    --mc_samples ${MC_SAMPLES} \
+    --mc_start_layer ${MC_START_LAYER} \
+    --mc_augment_p ${MC_AUGMENT_P} \
+    --mc_noise_std ${MC_NOISE_STD} \
+    # --adapt_few_shot \
+    # --use_vllm \ 
 
 
 # English competition datasets
@@ -107,6 +131,10 @@ python3 -u math_eval.py \
     --top_p 1 \
     --start 0 \
     --end -1 \
-    --use_vllm \
     --save_outputs \
     --overwrite \
+    --mc_samples ${MC_SAMPLES} \
+    --mc_start_layer ${MC_START_LAYER} \
+    --mc_augment_p ${MC_AUGMENT_P} \
+    --mc_noise_std ${MC_NOISE_STD} \
+    # --use_vllm \

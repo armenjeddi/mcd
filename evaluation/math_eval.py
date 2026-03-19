@@ -2,7 +2,7 @@ import random
 import os
 import argparse
 import time
-from vllm import LLM, SamplingParams
+# from vllm import LLM, SamplingParams
 from datetime import datetime
 from tqdm import tqdm
 
@@ -34,6 +34,10 @@ def parse_args():
     parser.add_argument("--n_sampling", default=1, type=int)
     parser.add_argument("--top_p", default=1, type=float)
     parser.add_argument("--max_tokens_per_call", default=2048, type=int)
+    parser.add_argument("--mc_samples", default=1, type=int)
+    parser.add_argument("--mc_start_layer", default=8, type=int)
+    parser.add_argument("--mc_augment_p", default=0.5, type=float)
+    parser.add_argument("--mc_noise_std", default=0.25, type=float)
     parser.add_argument("--shuffle", action="store_true")
     parser.add_argument("--use_vllm", action="store_true")
     parser.add_argument("--save_outputs", action="store_true")
@@ -121,12 +125,16 @@ def setup(args):
                 args.model_name_or_path, trust_remote_code=True
             )
     else:
-        llm, tokenizer = load_hf_lm_and_tokenizer(
-            model_name_or_path=args.model_name_or_path,
-            load_in_half=True,
-            use_fast_tokenizer=True,
-            use_safetensors=args.use_safetensors,
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, trust_remote_code=True)
+
+        llm = AutoModelForCausalLM.from_pretrained(
+            args.model_name_or_path,
+            torch_dtype=torch.bfloat16,          # use float16 if your GPU doesn't support bf16
+            device_map="auto",
+            attn_implementation="flash_attention_2",  # optional; remove if not installed / unsupported
+            trust_remote_code=True,
         )
+
 
     # infer & eval
     data_list = args.data_names.split(",")
@@ -284,8 +292,12 @@ def main(llm, tokenizer, data_name, args):
                 tokenizer=tokenizer,
                 prompts=prompts,
                 max_new_tokens=args.max_tokens_per_call,
-                batch_size=16,
+                batch_size=1,
                 stop_id_sequences=stop_words,
+                mc_samples=args.mc_samples,
+                mc_start_layer=args.mc_start_layer,
+                mc_augment_p=args.mc_augment_p,
+                mc_noise_std=args.mc_noise_std,
             )
 
         assert len(outputs) == len(current_prompts)
@@ -371,7 +383,8 @@ def main(llm, tokenizer, data_name, args):
                 )
 
         sample.pop("prompt")
-        sample.update({"code": code, "pred": preds, "report": reports})
+
+        sample.update({"code": code, "pred": preds, "report": reports, "num_generated_tokens": tokenizer(code[0], return_tensors="pt").input_ids.shape[1]})
         all_samples.append(sample)
 
     # add processed samples

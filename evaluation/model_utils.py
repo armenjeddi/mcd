@@ -75,7 +75,7 @@ class KeyWordsCriteria(StoppingCriteria):
 
 
 @torch.no_grad()
-def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequences=None, add_special_tokens=True, disable_tqdm=False, **generation_kwargs):
+def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequences=None, add_special_tokens=True, disable_tqdm=False, mc_samples=1, mc_start_layer=8, mc_augment_p=0.5, mc_noise_std=0.25, **generation_kwargs):
     generations = []
     if not disable_tqdm:
         progress = tqdm.tqdm(total=len(prompts), desc="Generating Completions")
@@ -97,6 +97,10 @@ def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequen
             input_ids=batch_input_ids,
             attention_mask=attention_mask,
             stopping_criteria=StoppingCriteriaList([stop_criteria]),
+            mc_samples=mc_samples,
+            mc_start_layer=mc_start_layer,
+            mc_augment_p=mc_augment_p,
+            mc_noise_std=mc_noise_std,
             # stopping_criteria=[KeyWordsCriteria(stop_id_sequences)] if stop_id_sequences else None,
             # stopping_criteria=[KeyWordsCriteriaTrunc(stop_id_sequences, batch_input_ids.size(1))] if stop_id_sequences else None,
             **generation_kwargs
